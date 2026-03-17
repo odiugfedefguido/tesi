@@ -1,0 +1,15 @@
+per regioni e provincia scelgo di prendere i dati da ARERA.
+
+perché:
+1. La fonte del dato (Chi raccoglie le informazioni?)
+ARERA (Autorità di Regolazione): I dati di ARERA derivano direttamente dai flussi informativi dei distributori di energia e dai venditori. Sono dati "amministrativi" e fiscali: contano esattamente quanti kWh sono passati dai contatori registrati come "domestici". È la fonte più precisa in termini di consumo reale fatturato.
+
+2. Perimetro Geografico (Cosa intendono per "Provincia"?)
+ARERA: Quando selezioni una provincia, ARERA somma tutti i comuni di quella provincia (es. Milano + tutti i 133 comuni dell'hinterland).
+
+3. Definizione di "Domestico"
+ARERA: Distingue rigidamente tra Domestico Residente e Domestico Non Residente.
+
+Usa ARERA se ti serve il dato tecnico più preciso possibile sui consumi elettrici e gas per capire quanto "pesa" una bolletta media in quella zona. È la fonte primaria per l'energia.
+
+

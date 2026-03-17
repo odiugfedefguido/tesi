@@ -1,0 +1,5 @@
+https://reporting.arera.it/SASVisualAnalytics/?reportUri=%2Freports%2Freports%2Fff58199d-f010-4cfd-a5d1-32c1d6359c05&sso_guest=true&reportViewOnly=true&reportContextBar=false&sas-welcome=false
+
+a questo link posso vedere i consumi medi per persona divisi per regione. per esportare i dati: tre puntini su ogni grafico -> esporta
+
+lettura dei dati: residenti-> casa dove si vive stabilmente, non residenti-> analisi su casa dove non si vive stabilmente (es casa vacanze)
