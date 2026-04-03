@@ -1,0 +1,10 @@
+Una TD è un file JSON-LD (JSON for Linked Data) che segue lo standard ufficiale del W3C Web of Things. Il suo scopo è permettere a un software (un "Consumer") di capire come interagire con un dispositivo senza sapere a priori che marca o modello sia.
+
+I 3 Pilastri della TD (Interaction Affordances)
+Per descrivere una "Cosa", il W3C dice che devi definire tre tipi di interazioni:
+
+Properties (Proprietà): Rappresentano lo stato dell'oggetto. Sono dati che puoi leggere (es. "Quanti Watt sta consumando?") o scrivere (es. "Imposta la soglia massima a 3kW").
+
+Actions (Azioni): Rappresentano funzioni che invocano un cambiamento o un processo (es. "Spegni la presa", "Avvia ciclo di sbrinamento").
+
+Events (Eventi): Sono comunicazioni asincrone. Non è il software a chiedere, è la presa a "urlare" quando succede qualcosa (es. "Attenzione: sovraccarico rilevato!").

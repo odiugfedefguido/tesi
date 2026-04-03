@@ -1,0 +1,11 @@
+le politiche di risparmi si dividono in: 
+
+Monitoraggio e Reporting: Confronto con i benchmark (medie regionali/nazionali) per generare alert ("Stai consumando il 20% in più della media").
+
+Automazione basata su Soglie: Spegnimento automatico di carichi non prioritari se si supera la potenza contrattuale (evitare il distacco del contatore).
+
+Time-shifting: Suggerire o automatizzare l'accensione di un elettrodomestico quando il costo dell'energia è minimo (es. analizzando i dati del mercato elettrico se disponibile).
+
+----------------------------------------------------------------
+
+o

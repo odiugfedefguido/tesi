@@ -1,0 +1,9 @@
+- studio e analisi dei consumi 
+- individuare che dispositivi rendere smart
+- ed individuare le regole/leggi per cui si devono attivare/non attivare
+- definire le things descriptions
+- scrivere il software per la gestione delle regole
+- testare tutto su home assistant
+- analizzare i dati
+---------------------------------------------------------------------------------------
+allora, sto facendo una tesi di ingegneria è scienze informatiche, per quanto riguarda il monitoraggio dei consumi in ambito domestico. io monitoro i miei consumi e poi li confronto su quali sono le medie (nazionali, europee, regionali, ecc) per capire se posso attuare politiche di risparmio dei consumi.

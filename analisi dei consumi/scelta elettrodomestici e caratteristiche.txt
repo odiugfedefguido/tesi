@@ -1,0 +1,9 @@
+possiamo dividere i carichi in 3 categorie: 
+Carichi "Energivori" e Ciclici (Alta Priorità): Lavatrice, lavastoviglie, asciugatrice. Sono ideali per politiche di shaping (spostare l'uso in fasce orarie meno care o con più energia rinnovabile).
+
+Carichi "Always-on" (Baseload): Router, TV in standby, desktop PC, console. Monitorarli serve a individuare il "consumo parassita".
+
+Carichi Termici (Se elettrici): Boiler elettrici o condizionatori. Hanno un'inerzia termica che permette di spegnerli/accenderli senza perdita immediata di comfort.
+
+SI DECIDE DI AVERE 1/2 DISPOSITIVI PER OGNI CATEGORIA
+------------------------------------------------------------------------------

@@ -1,0 +1,44 @@
+indice tesi
+
+1. Proposta di Indice (Draft)
+Introduzione
+Motivazione: La sfida della sostenibilità energetica domestica.
+
+Obiettivi della tesi: Monitoraggio low-cost e retrofitting intelligente.
+
+Struttura dell'elaborato.
+
+Capitolo 1: Stato dell'Arte e Contesto
+
+Il problema del consumo energetico residenziale.
+Evoluzione dell'IoT nella domotica: dai sistemi proprietari agli standard aperti.
+Il concetto di Retrofitting: rendere smart l'esistente senza sostituirlo.
+Analisi della letteratura (i risultati delle tue ricerche su IEEE Xplore).
+
+Capitolo 2: Il Paradigma Web of Things (WoT)
+
+Limiti dell'IoT tradizionale (i "Silos" tecnologici).
+Architettura W3C Web of Things: Thing Descriptions e interoperabilità.
+Protocolli di comunicazione: Zigbee, MQTT, HTTP e REST.
+
+Capitolo 3: Progettazione del Sistema
+Requisiti del sistema: scalabilità, basso costo e facilità d'uso.
+Analisi del dominio: intervista all'esperto e individuazione dei carichi critici.
+Architettura proposta: dal sensore fisico alla dashboard web.
+
+Capitolo 4: Implementazione Tecnologica
+Scelta dell'hardware: Dispositivi IKEA Home Smart (Zigbee) e sensori di consumo.
+Il Gateway: Integrazione tramite Zigbee2MQTT e Home Assistant.
+Modellazione dei dispositivi secondo lo standard WoT.
+Sviluppo delle logiche di automazione (es. Node-RED o script Python).
+
+Capitolo 5: Caso di Studio e Risultati
+Configurazione dell'ambiente di test (es. monitoraggio di un elettrodomestico specifico).
+Raccolta e analisi dei dati di consumo.
+Valutazione del risparmio potenziale e dei costi di implementazione.
+
+Conclusioni e Sviluppi Futuri
+
+Sintesi del lavoro svolto.
+
+Limiti del sistema e possibili espansioni (es. integrazione con AI per previsione consumi).
