@@ -1,26 +1,48 @@
 module.exports = async function registerComputer(WoT, HASS_URL, HASS_TOKEN) {
   const computer = await WoT.produce({
-    title: "SmartPlug_Computer",
+    title: "smartplug_computer",
     description: "Presa computer",
-    "@context": "https://www.w3.org/2019/wot/td/v1",
+    "@context": [
+      "https://www.w3.org/2019/wot/td/v1",
+      { "hems": "http://example.org/hems-metadata#" }
+    ],
     properties: {
       status: { type: "string", readOnly: true },
       power: { type: "number", unit: "W", readOnly: true }
     },
-    actions: { toggle: {} }
+    actions: { toggle: {} },
+    "hems:metadata": {
+      priority: 1,         // Priorità massima
+      deferrable: false    // Il computer non è un carico differibile
+    }
   });
 
   computer.setPropertyReadHandler("status", async () => {
-    const res = await fetch(`${HASS_URL}/api/states/switch.computer`, { headers: { Authorization: `Bearer ${HASS_TOKEN}` } });
-    return (await res.json()).state;
+    try {
+      const res = await fetch(`${HASS_URL}/api/states/switch.computer`, { 
+        headers: { Authorization: `Bearer ${HASS_TOKEN}` } 
+      });
+      if (!res.ok) return "off";
+      const data = await res.json();
+      return data.state || "off";
+    } catch (e) {
+      return "off";
+    }
   });
 
   computer.setPropertyReadHandler("power", async () => {
-    const resV = await fetch(`${HASS_URL}/api/states/sensor.computer_tensione`, { headers: { Authorization: `Bearer ${HASS_TOKEN}` } });
-    const resA = await fetch(`${HASS_URL}/api/states/sensor.computer_corrente`, { headers: { Authorization: `Bearer ${HASS_TOKEN}` } });
-    const voltage = parseFloat((await resV.json()).state) || 0;
-    const current = parseFloat((await resA.json()).state) || 0;
-    return parseFloat((voltage * current).toFixed(2));
+    try {
+      // Le Tapo P110 in Home Assistant espongono la potenza istantanea in Watt con un sensore dedicato
+      const resP = await fetch(`${HASS_URL}/api/states/sensor.computer_current_consumption`, { 
+        headers: { Authorization: `Bearer ${HASS_TOKEN}` } 
+      });
+      if (!resP.ok) return 0;
+      const data = await resP.json();
+      const powerVal = parseFloat(data.state);
+      return isNaN(powerVal) ? 0 : powerVal;
+    } catch (e) {
+      return 0;
+    }
   });
 
   computer.setActionHandler("toggle", async () => {

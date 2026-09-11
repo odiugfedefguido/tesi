@@ -1,13 +1,13 @@
 /**
- * SMART WOT ENERGY CONTROLLER (HEMS Complete)
- * Modulo Consumer con 4 Politiche Energetiche Avanzate per la Tesi.
+ * SMART WOT ENERGY CONTROLLER (HEMS Dinamico basato su Thing Descriptions)
  */
 
-const DEVICES = [
-  { id: "lavatrice", name: "Lavatrice", endpoint: "http://localhost:8080/smartplug_lavatrice", priority: 1, deferrable: true },
-  { id: "computer", name: "Computer", endpoint: "http://localhost:8080/smartplug_computer", priority: 2, deferrable: false },
-  { id: "friggitrice", name: "Friggitrice ad Aria", endpoint: "http://localhost:8080/smartplug_friggitrice", priority: 3, deferrable: true },
-  { id: "aspirapolvere", name: "Aspirapolvere", endpoint: "http://localhost:8080/smartplug_aspirapolvere", priority: 4, deferrable: true }
+// Endpoint radice dei singoli server WoT dei dispositivi
+const THING_URLS = [
+  "http://localhost:8080/smartplug_computer",
+  "http://localhost:8080/smartplug_lavatrice",
+  "http://localhost:8080/smartplug_friggitrice",
+  "http://localhost:8080/smartplug_aspirapolvere"
 ];
 
 const MAX_POWER_LIMIT_W = 3000; 
@@ -29,12 +29,58 @@ function getCurrentTariffZone() {
   return "F2/F3 (Economica)";
 }
 
+/**
+ * Fase di Discovery: scarica le TD e mappa dinamicamente endpoint e politiche
+ */
+async function discoverDevices() {
+  const discoveredDevices = [];
+  console.log("🔍 Avvio discovery dei dispositivi tramite Thing Descriptions...");
+
+  for (const url of THING_URLS) {
+    try {
+      const res = await fetch(url, {
+        headers: { "Accept": "application/json" }
+      });
+      
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const text = await res.text();
+      if (!text) throw new Error("Risposta vuota dal server WoT");
+      
+      const td = JSON.parse(text);
+
+      // Estrae dinamicamente gli URL d'interazione dalle "forms" della TD
+      const statusHref = td.properties.status.forms[0].href;
+      const powerHref = td.properties.power.forms[0].href;
+      const toggleHref = td.actions.toggle.forms[0].href;
+      
+      // Legge i metadati personalizzati definiti nella TD (priorità e differibilità)
+      const metadata = td['hems:metadata'] || { priority: 99, deferrable: false };
+
+      discoveredDevices.push({
+        id: td.title.toLowerCase().replace('smartplug_', ''),
+        name: td.title,
+        statusHref,
+        powerHref,
+        toggleHref,
+        priority: metadata.priority,
+        deferrable: metadata.deferrable
+      });
+
+      console.log(`  ✅ Scoperto: ${td.title} | Prio: ${metadata.priority} | Differibile: ${metadata.deferrable}`);
+    } catch (err) {
+      console.error(`  ⚠️ Impossibile raggiungere la TD a ${url}:`, err.message);
+    }
+  }
+
+  return discoveredDevices;
+}
+
 async function getDeviceData(device) {
   try {
-    const resStatus = await fetch(`${device.endpoint}/properties/status`);
+    const resStatus = await fetch(device.statusHref);
     const status = await resStatus.json();
 
-    const resPower = await fetch(`${device.endpoint}/properties/power`);
+    const resPower = await fetch(device.powerHref);
     const power = await resPower.json();
 
     return { ...device, status, power: typeof power === "number" ? power : 0 };
@@ -47,7 +93,7 @@ async function getDeviceData(device) {
 async function turnOffDevice(device, reason) {
   console.warn(`🚨 AZIONE WOT [${reason}]: Spegnimento ${device.name}...`);
   try {
-    await fetch(`${device.endpoint}/actions/toggle`, {
+    await fetch(device.toggleHref, {
       method: "POST",
       headers: { "Content-Type": "application/json" }
     });
@@ -57,13 +103,13 @@ async function turnOffDevice(device, reason) {
   }
 }
 
-async function evaluateEnergyPolicies() {
+async function evaluateEnergyPolicies(devices) {
   const tariffZone = getCurrentTariffZone();
   console.log(`\n=============================================================`);
-  console.log(`--- [${new Date().toLocaleTimeString()}] Valutazione HEMS Multi-Politica ---`);
+  console.log(`--- [${new Date().toLocaleTimeString()}] Valutazione HEMS Dinamica (TD-Driven) ---`);
   console.log(` Fascia Oraria: ${tariffZone} | Prod. Solare Stimata: ${SIMULATED_SOLAR_PRODUCTION_W} W`);
 
-  const states = await Promise.all(DEVICES.map(getDeviceData));
+  const states = await Promise.all(devices.map(getDeviceData));
   const totalPower = states.reduce((acc, dev) => acc + dev.power, 0);
 
   console.log(`Potenza Totale Assorbita: ${totalPower.toFixed(2)} W / Limite: ${MAX_POWER_LIMIT_W} W`);
@@ -72,7 +118,7 @@ async function evaluateEnergyPolicies() {
   });
 
   // -------------------------------------------------------------
-  // POLITICA 1: Anti-Sovraccarico (Peak Shaving)
+  // POLITICA 1: Anti-Sovraccarico (Peak Shaving basato sulle Priorità)
   // -------------------------------------------------------------
   if (totalPower > MAX_POWER_LIMIT_W) {
     console.warn(`\nPOLITICA 1 [SICUREZZA]: Sovraccarico Rilevato!`);
@@ -100,12 +146,11 @@ async function evaluateEnergyPolicies() {
   // POLITICA 3: Taglio Consumi Fantasma (Standby Killer)
   // -------------------------------------------------------------
   states.forEach(d => {
-    // Se consuma tra 2W e 15W è considerato in standby
     if (d.status === "on" && d.power >= 2 && d.power <= 15) {
       standbyCounters[d.id] = (standbyCounters[d.id] || 0) + 1;
       console.warn(`\nPOLITICA 3 [STANDBY]: ${d.name} in consumo fantasma (${d.power} W). Rilevamento ${standbyCounters[d.id]}/3.`);
       
-      if (standbyCounters[d.id] >= 3) { // Dopo 3 rilevamenti consecutivi (15 sec)
+      if (standbyCounters[d.id] >= 3) {
         turnOffDevice(d, "TAGLIO STANDBY FANTASMA");
         standbyCounters[d.id] = 0;
       }
@@ -127,5 +172,18 @@ async function evaluateEnergyPolicies() {
   }
 }
 
-console.log("Avvio HEMS Controller Completo (4 Politiche WoT)...");
-setInterval(evaluateEnergyPolicies, CHECK_INTERVAL_MS);
+async function main() {
+  console.log("Avvio del Controller HEMS WoT...");
+  
+  const devices = await discoverDevices();
+  
+  if (devices.length === 0) {
+    console.error("❌ Nessun dispositivo trovato. Verifica che i server WoT siano attivi.");
+    return;
+  }
+
+  setInterval(() => evaluateEnergyPolicies(devices), CHECK_INTERVAL_MS);
+  evaluateEnergyPolicies(devices);
+}
+
+main();
