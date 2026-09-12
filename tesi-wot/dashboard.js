@@ -36,7 +36,6 @@ async function loadDevicesFromTDs() {
       
       const td = JSON.parse(text);
 
-      // FORZIAMO GLI INDIRIZZI SU LOCALHOST PER EVITARE IL BLOCCO CORS DEL BROWSER
       const titleLower = td.title.toLowerCase();
       const id = titleLower.replace('smartplug_', '');
       
@@ -92,6 +91,27 @@ async function calculateKwhFromCSV(filePath, targetYear, targetMonth) {
 
 app.get('/api/devices', (req, res) => {
     res.json(DEVICES);
+});
+
+// Endpoint di supporto per calcolare lo stato delle politiche da mostrare in UI
+app.get('/api/hems-status', async (req, res) => {
+    try {
+        const now = new Date();
+        const day = now.getDay();
+        const hour = now.getHours();
+        
+        let tariff = "F2/F3 (Economica)";
+        if (day !== 0 && day !== 6 && hour >= 8 && hour < 19) {
+            tariff = "F1 (Costosa/Picco)";
+        }
+
+        res.json({
+            tariffZone: tariff,
+            simulatedSolar: 2500
+        });
+    } catch (e) {
+        res.status(500).json({ error: "Errore calcolo politiche" });
+    }
 });
 
 app.get('/api/monthly-stats', async (req, res) => {
@@ -150,7 +170,7 @@ app.get('/', (req, res) => {
         .badge { display: inline-block; padding: 4px 8px; font-size: 11px; border-radius: 4px; background: #e9ecef; font-weight: bold; }
         .badge-priority { background: #e2e3e5; color: #383d41; }
         .badge-type { background: #d1ecf1; color: #0c5460; }
-        .charts-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; }
+        .charts-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; margin-top: 20px; }
         .chart-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .on { color: #28a745; font-weight: bold; }
         .off { color: #dc3545; font-weight: bold; }
@@ -162,6 +182,14 @@ app.get('/', (req, res) => {
 <body>
     <h1>🏠 HEMS - Monitoraggio & Politiche WoT</h1>
     <h3>Potenza Istantanea Totale: <span id="total-power">0</span> W / 3000 W</h3>
+
+    <!-- Pannello Politiche Energetiche HEMS integrato -->
+    <div class="card" style="margin-bottom: 25px; border-top-color: #28a745;">
+        <h3>🌱 Stato Politiche HEMS & Ottimizzazione Attiva</h3>
+        <p><strong>Fascia Oraria (Time-of-Use):</strong> <span id="hems-tariff" style="color: #d95f02; font-weight: bold;">Caricamento...</span></p>
+        <p><strong>Surplus Solare Stimato:</strong> <span id="hems-solar">0</span> W</p>
+        <p><strong>Suggerimento Politica Ecologica / Carichi:</strong> <span id="hems-advice" style="color: #007bff; font-weight: bold;">Analisi in corso...</span></p>
+    </div>
 
     <div class="grid" id="grid">Caricamento dispositivi da Thing Descriptions...</div>
 
@@ -273,6 +301,7 @@ app.get('/', (req, res) => {
             let total = 0;
             let powers = [];
 
+            // Legge lo stato dei dispositivi
             for (const dev of devices) {
                 try {
                     const resS = await fetch(dev.statusHref);
@@ -301,6 +330,40 @@ app.get('/', (req, res) => {
             if (pieChart) {
                 pieChart.data.datasets[0].data = powers;
                 pieChart.update();
+            }
+
+            // Aggiorna lo stato delle politiche HEMS nella card dedicata
+            try {
+                const resHems = await fetch('/api/hems-status');
+                const hemsData = await resHems.json();
+                document.getElementById('hems-tariff').innerText = hemsData.tariffZone;
+
+                const solarSurplus = hemsData.simulatedSolar - total;
+                document.getElementById('hems-solar').innerText = solarSurplus.toFixed(2);
+
+                const adviceEl = document.getElementById('hems-advice');
+                if (total > 3000) {
+                    adviceEl.innerText = "⚠️ ATTENZIONE: Sovraccarico di potenza in corso (>3kW)! Politica di protezione attiva.";
+                    adviceEl.style.color = "#dc3545";
+                } else if (solarSurplus > 500) {
+                    const offDeferrableNames = devices.filter(d => {
+                        const statusEl = document.getElementById(\`status-\${d.id}\`);
+                        return d.deferrable && statusEl && statusEl.textContent === 'OFF';
+                    }).map(d => d.name);
+
+                    if (offDeferrableNames.length > 0) {
+                        adviceEl.innerText = \`☀️ Surplus solare ottimale! Consigliato avviare: \${offDeferrableNames.join(', ')}\`;
+                        adviceEl.style.color = "#28a745";
+                    } else {
+                        adviceEl.innerText = "☀️ Ottimo surplus solare, carichi differibili già attivi.";
+                        adviceEl.style.color = "#28a745";
+                    }
+                } else {
+                    adviceEl.innerText = "✅ Sistema bilanciato nei limiti energetici.";
+                    adviceEl.style.color = "#007bff";
+                }
+            } catch (e) {
+                console.error("Errore aggiornamento politiche HEMS:", e);
             }
         }
 
