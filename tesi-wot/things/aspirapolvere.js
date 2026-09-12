@@ -35,24 +35,36 @@ module.exports = async function registerAspirapolvere(WoT, HASS_URL, HASS_TOKEN)
       const res = await fetch(`${HASS_URL}/api/states/sensor.aspirapolvere_consumo_di_corrente`, { 
         headers: { Authorization: `Bearer ${HASS_TOKEN}` } 
       });
-      if (!res.ok) return 0;
+      if (!res.ok) {
+        console.error("❌ HA ha risposto con errore per la potenza:", res.status);
+        return 0;
+      }
       const data = await res.json();
       const powerVal = parseFloat(data.state);
       return isNaN(powerVal) ? 0 : powerVal;
     } catch (e) {
+      console.error("❌ Errore di rete leggendo la potenza:", e.message);
       return 0;
     }
   });
 
   aspirapolvere.setActionHandler("toggle", async () => {
+    console.log("👉 Tentativo di toggle per l'aspirapolvere in corso...");
     try {
-      await fetch(`${HASS_URL}/api/services/switch/toggle`, {
+      const res = await fetch(`${HASS_URL}/api/services/switch/toggle`, {
         method: "POST",
         headers: { Authorization: `Bearer ${HASS_TOKEN}`, "Content-Type": "application/json" },
         body: JSON.stringify({ entity_id: "switch.aspirapolvere" })
       });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`❌ Home Assistant ha rifiutato il toggle. Codice: ${res.status}. Dettaglio:`, errorText);
+      } else {
+        console.log("✅ Toggle eseguito con successo su Home Assistant!");
+      }
     } catch (e) {
-      console.error("Errore nel toggle dell'aspirapolvere:", e.message);
+      console.error("❌ Errore di rete critico nel toggle dell'aspirapolvere:", e.message);
     }
     return { success: true };
   });

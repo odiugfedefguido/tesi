@@ -11,7 +11,6 @@ const path = require('path');
 const app = express();
 const PORT = 3000;
 
-// Endpoint radice dei singoli server WoT dei dispositivi
 const THING_URLS = [
   "http://localhost:8080/smartplug_computer",
   "http://localhost:8080/smartplug_lavatrice",
@@ -21,10 +20,6 @@ const THING_URLS = [
 
 let DEVICES = [];
 
-/**
- * Fase di Discovery: scarica le TD e mappa dinamicamente i dispositivi, 
- * i link di interazione e i metadati semantici (priorità e differibilità).
- */
 async function loadDevicesFromTDs() {
   const discovered = [];
   console.log("🔍 Avvio discovery dei dispositivi per la Dashboard tramite TD...");
@@ -41,30 +36,32 @@ async function loadDevicesFromTDs() {
       
       const td = JSON.parse(text);
 
-      const statusHref = td.properties.status.forms[0].href;
-      const powerHref = td.properties.power.forms[0].href;
-      const toggleHref = td.actions.toggle.forms[0].href;
-      const baseEndpoint = statusHref.replace('/properties/status', '');
+      // FORZIAMO GLI INDIRIZZI SU LOCALHOST PER EVITARE IL BLOCCO CORS DEL BROWSER
+      const titleLower = td.title.toLowerCase();
+      const id = titleLower.replace('smartplug_', '');
       
-      // Estrae i metadati semantici definiti nella TD
+      const baseEndpoint = `http://localhost:8080/${titleLower}`;
+      const statusHref = `${baseEndpoint}/properties/status`;
+      const powerHref = `${baseEndpoint}/properties/power`;
+      const toggleHref = `${baseEndpoint}/actions/toggle`;
+      
       const metadata = td['hems:metadata'] || { priority: 99, deferrable: false };
-      const id = td.title.toLowerCase().replace('smartplug_', '');
 
       discovered.push({
         id: id,
-        name: td.title.replace('SmartPlug_', ''),
+        name: td.title.replace(/smartplug_/i, ''), 
         endpoint: baseEndpoint,
         statusHref,
         powerHref,
         toggleHref,
         priority: metadata.priority,
         deferrable: metadata.deferrable,
-        nationalAvgMonth: 20.0, // Valore di riferimento mensile ARERA stimato (kWh)
+        nationalAvgMonth: 20.0,
         csvFile: `consumi_${id}.csv`,
         color: id === 'computer' ? '#d95f02' : id === 'lavatrice' ? '#2b5c8f' : id === 'friggitrice' ? '#7570b3' : '#1b9e77'
       });
 
-      console.log(`  ✅ Dashboard ha mappato: ${td.title} | Prio: ${metadata.priority} | Differibile: ${metadata.deferrable}`);
+      console.log(`  ✅ Dashboard ha mappato: ${td.title}`);
     } catch (err) {
       console.error(`  ⚠️ Impossibile leggere la TD da ${url}:`, err.message);
     }
@@ -73,9 +70,6 @@ async function loadDevicesFromTDs() {
   console.log(`📊 Dashboard pronta: ${DEVICES.length} dispositivi configurati.`);
 }
 
-/**
- * Legge i file CSV storici per il calcolo mensile dei kWh (confronto ARERA)
- */
 async function calculateKwhFromCSV(filePath, targetYear, targetMonth) {
     if (!fs.existsSync(filePath)) return 0;
     const fileStream = fs.createReadStream(filePath);
@@ -96,7 +90,6 @@ async function calculateKwhFromCSV(filePath, targetYear, targetMonth) {
     return parseFloat(totalKwh.toFixed(3));
 }
 
-// API Endpoints
 app.get('/api/devices', (req, res) => {
     res.json(DEVICES);
 });
@@ -139,7 +132,6 @@ app.get('/api/monthly-stats', async (req, res) => {
     }
 });
 
-// Interfaccia Grafica Web (Frontend integrato)
 app.get('/', (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -153,7 +145,7 @@ app.get('/', (req, res) => {
         h1 { margin-bottom: 5px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .card { background: white; padding: 18px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 5px solid #007bff; }
-        .card h4 { margin-top: 0; margin-bottom: 10px; font-size: 18px; }
+        .card h4 { margin-top: 0; margin-bottom: 10px; font-size: 18px; text-transform: capitalize; }
         .badge-container { margin: 10px 0; display: flex; gap: 6px; flex-wrap: wrap; }
         .badge { display: inline-block; padding: 4px 8px; font-size: 11px; border-radius: 4px; background: #e9ecef; font-weight: bold; }
         .badge-priority { background: #e2e3e5; color: #383d41; }
@@ -313,8 +305,12 @@ app.get('/', (req, res) => {
         }
 
         async function toggle(toggleHref) {
-            await fetch(toggleHref, { method: 'POST' });
-            update();
+            try {
+                const response = await fetch(toggleHref, { method: 'POST' });
+                if (response.ok) update(); 
+            } catch (err) {
+                console.error("Errore invio toggle:", err);
+            }
         }
 
         window.onload = () => {
@@ -326,7 +322,6 @@ app.get('/', (req, res) => {
   `);
 });
 
-// Avvio del server Express
 app.listen(PORT, async () => {
     await loadDevicesFromTDs();
     console.log(`🌐 Dashboard HEMS attiva su http://localhost:${PORT}`);
